@@ -1,34 +1,100 @@
 @[Link(framework: "Cocoa")]
-lib CocoaFramework
+lib LibObjC
     type ID = Void*
     type SEL = Void*
-    type CLS = Void*
     fun objc_msgSend(obj : ID, message : SEL, ...): ID
     fun objc_getClass(cls : LibC::Char*): ID
-    fun class_createInstance(cls : CLS, extraBytes : LibC::SizeT): ID
-    fun NSLog(str : ID)
     fun sel_registerName(name : LibC::Char*): SEL
+    fun NSLog(str : ID)
+
+    struct CGPoint
+        x : Float64
+        y : Float64
+    end
+
+    struct CGSize
+        width : Float64 
+        height : Float64
+    end
+
+    struct NSRect
+        origin : CGPoint
+        size : CGSize
+    end
 end
 
-class Cocoa
-    def getClass(cls : String): CocoaFramework::ID
-        CocoaFramework.objc_getClass(cls.check_no_null_byte)
+module LibObjC_Object
+    def initialize(@id : LibObjC::ID)
     end
 
-    def msgSend(obj : CocoaFramework::ID, message : CocoaFramework::SEL, *args) CocoaFramework::ID
-        CocoaFramework.objc_msgSend(obj, message, *args)
+    def initialize()
+        alloc = LibObjC.sel_registerName("alloc")
+        initialize = LibObjC.sel_registerName("initialize")
+        @id = LibObjC.objc_msgSend(@@cls, alloc)
+        LibObjC.objc_msgSend(@id, initialize)
     end
 
-    def msgSend(obj : CocoaFramework::ID, message : String, *args) CocoaFramework::ID
-        sel = CocoaFramework.sel_registerName(message.check_no_null_byte)
-        CocoaFramework.objc_msgSend(obj, sel, *args)
+    def finalize()
+        dealloc = LibObjC.sel_registerName("dealloc")
+        LibObjC.objc_msgSend(@id, dealloc);
     end
 
-    def createInstance(cls : CLS): ID
-        CocoaFramework.class_createInstance(cls, 0)
+    def to_unsafe
+        @id
+    end
+end
+
+module NS
+    def self.log(str : LibObjC_Object)
+        LibObjC.NSLog(str)
     end
 
-    def log(str : CocoaFramework::ID)
-        CocoaFramework.NSLog(str)
+    def self.makeRect(x : Float64, y : Float64, width : Float64, height : Float64)
+        origin = LibObjC::CGPoint.new
+        origin.x = x
+        origin.y = y
+        size = LibObjC::CGSize.new
+        size.width = width
+        size.height = height
+        rect = LibObjC::NSRect.new
+        rect.origin = origin
+        rect.size = size
+        rect
+    end
+end
+
+macro objc_allocator(name, _as)
+    def self.{{_as}} (*args)
+        method = LibObjC.sel_registerName({{name}})
+        id = LibObjC.objc_msgSend(@@cls, method, *args)
+        instance = allocate
+        instance.initialize(id)
+        instance
+    end
+end
+
+macro objc_initializer(name, _as)
+    def self.{{_as}} (*args)
+        alloc = LibObjC.sel_registerName("alloc")
+        method = LibObjC.sel_registerName({{name}})
+        id = LibObjC.objc_msgSend(@@cls, alloc, *args)
+        LibObjC.objc_msgSend(id, method, *args)
+        instance = allocate
+        instance.initialize(id)
+        instance
+    end
+end
+
+macro objc_method(name, _as)
+    def self.{{_as}} (...args)
+        method = LibObjC.sel_registerName({{name}})
+        LibObjC.objc_msgSend(@id, method, *args)
+    end
+end
+
+macro import_class(name)
+    class {{name}}
+        include LibObjC_Object
+        @@cls = LibObjC.objc_getClass("{{name}}")
     end
 end
