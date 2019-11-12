@@ -17,7 +17,6 @@ describe LibCocoa do
     window = NSWindow.initWithContentRect(frame)
     window.orderFront_(0)
     window.setTitle_(NSString.stringWithUTF8String("Hello!"))
-    app.activateIgnoringOtherApps_(true)
     app.run
     window.close
   end
