@@ -29,7 +29,7 @@ module LibObjC_Object
 
     def initialize()
         alloc = LibObjC.sel_registerName("alloc")
-        initialize = LibObjC.sel_registerName("initialize")
+        initialize = LibObjC.sel_registerName("init")
         @id = LibObjC.objc_msgSend(@@cls, alloc)
         LibObjC.objc_msgSend(@id, initialize)
     end
@@ -73,6 +73,14 @@ macro objc_allocator(name, _as)
     end
 end
 
+macro objc_static(name, _as)
+    def self.{{_as}} (*args)
+        method = LibObjC.sel_registerName({{name}})
+        LibObjC.objc_msgSend(@@cls, method, *args)
+        nil
+    end
+end
+
 macro objc_initializer(name, _as)
     def self.{{_as}} (*args)
         alloc = LibObjC.sel_registerName("alloc")
@@ -86,7 +94,7 @@ macro objc_initializer(name, _as)
 end
 
 macro objc_method(name, _as)
-    def self.{{_as}} (...args)
+    def {{_as}}(*args)
         method = LibObjC.sel_registerName({{name}})
         LibObjC.objc_msgSend(@id, method, *args)
     end
@@ -96,5 +104,14 @@ macro import_class(name)
     class {{name}}
         include LibObjC_Object
         @@cls = LibObjC.objc_getClass("{{name}}")
+
+        macro method_missing(call)
+            method = LibObjC.sel_registerName("\{{call.name.id}}")
+            \{% if call.args.size > 0 %}
+                LibObjC.objc_msgSend(@id, method, *\{{call.args}})
+            \{% else %}
+                LibObjC.objc_msgSend(@id, method)
+            \{% end %}
+        end
     end
 end
