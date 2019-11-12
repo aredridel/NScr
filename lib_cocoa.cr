@@ -106,11 +106,11 @@ macro import_class(name)
         @@cls = LibObjC.objc_getClass("{{name}}")
 
         macro method_missing(call)
-            method = LibObjC.sel_registerName("\{{call.name.id}}")
+            %meth = LibObjC.sel_registerName(\{{call.name.id.stringify.gsub(/_/, ": ")}}.strip) # strip to avoid a bug with "Error: unterminated quoted symbol"
             \{% if call.args.size > 0 %}
-                LibObjC.objc_msgSend(@id, method, *\{{call.args}})
+                LibObjC.objc_msgSend(@id, %meth, \{{*call.args}})
             \{% else %}
-                LibObjC.objc_msgSend(@id, method)
+                LibObjC.objc_msgSend(@id, %meth)
             \{% end %}
         end
     end
