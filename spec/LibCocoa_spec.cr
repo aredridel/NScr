@@ -1,33 +1,7 @@
 require "./spec_helper"
 require "../lib_cocoa"
 
-
-import_class NSString
-
-class NSString
-  objc_allocator "stringWithUTF8String:", stringWithUTF8String
-end
-
-import_class NSWindow
-
-class NSWindow
-  objc_initializer "initWithContentRect:styleMask:backing:defer:", initWithContentRect_styleMask_backing_defer
-  def self.initWithContentRect(frame : LibObjC::NSRect)
-    self.initWithContentRect_styleMask_backing_defer(frame, 15, 2, false)
-  end
-end
-
-import_class NSRunLoop
-
-class NSRunLoop
-  objc_allocator "currentRunLoop", currentRunLoop
-end
-
-import_class NSApplication
-
-class NSApplication
-  objc_allocator "sharedApplication", sharedApplication
-end
+extend LibCocoa
 
 describe LibCocoa do
   # TODO: Write tests
